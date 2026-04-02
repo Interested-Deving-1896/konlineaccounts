@@ -6,7 +6,14 @@
 
 #include "carddav.h"
 
+#include "debug.h"
 #include "fdwriter.h"
+
+#include <qt6keychain/keychain.h>
+
+#include <QDBusConnection>
+#include <QDBusMessage>
+#include <QDBusVariant>
 
 using namespace Qt::Literals;
 
@@ -41,14 +48,32 @@ QDBusUnixFileDescriptor CardDAV::password() const
 {
     CHECK_ACCESS
 
-    const QByteArray password = m_config.readEntry("password", QString()).toUtf8();
+    m_account->setDelayedReply(true);
 
-    const auto result = FdWriter::write(password);
+    QKeychain::ReadPasswordJob *job = new QKeychain::ReadPasswordJob(u"konlineaccounts"_s);
+    job->setKey(u"account/" + m_account->id() + u"/nextcloud/password");
 
-    if (!result) {
-        m_account->sendErrorReply(QDBusError::InternalError, u"Internal error"_s);
-        return {};
-    }
+    connect(job, &QKeychain::Job::finished, this, [job, message = m_account->message()] {
+        if (job->error()) {
+            qCWarning(LOG_KONLINEACCOUNTS_NEXTCLOUD) << "Failed to read password from keychain" << job->errorString();
+            auto reply = message.createErrorReply(QDBusError::InternalError, job->errorString());
+            QDBusConnection::sessionBus().send(reply);
+            return;
+        }
 
-    return *result;
+        const auto result = FdWriter::write(job->textData().toUtf8());
+
+        if (!result) {
+            auto reply = message.createErrorReply(QDBusError::InternalError, u"Internal error"_s);
+            QDBusConnection::sessionBus().send(reply);
+            return;
+        }
+
+        auto reply = message.createReply(QVariant::fromValue(result.value()));
+        QDBusConnection::sessionBus().send(reply);
+    });
+
+    job->start();
+
+    return {};
 }

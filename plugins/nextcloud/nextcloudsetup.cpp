@@ -5,6 +5,7 @@
  */
 
 #include "nextcloudsetup.h"
+#include "setup_debug.h"
 
 #include <QDBusConnection>
 #include <QDBusMessage>
@@ -20,6 +21,8 @@
 #include <KIO/Global>
 #include <KLocalizedString>
 #include <KSharedConfig>
+
+#include <qt6keychain/keychain.h>
 
 using namespace Qt::Literals;
 
@@ -70,22 +73,28 @@ void NextcloudSetup::finalUrlHandler(const QUrl &url)
     auto calDav = m_builder->config().group(u"CalDAV"_s);
     calDav.writeEntry("url", davUrl);
     calDav.writeEntry("username", username);
-    calDav.writeEntry("password", password);
 
     auto cardDav = m_builder->config().group(u"CardDAV"_s);
     cardDav.writeEntry("url", davUrl);
     cardDav.writeEntry("username", username);
-    cardDav.writeEntry("password", password);
 
     auto nextcloudGroup = m_builder->config().group(u"Nextcloud"_s);
     nextcloudGroup.writeEntry("url", m_server.toString());
     nextcloudGroup.writeEntry("username", username);
-    nextcloudGroup.writeEntry("password", password);
     nextcloudGroup.writeEntry("storagePath", u"/remote.php/dav/files/%1"_s.arg(username));
 
-    m_builder->finish();
-
-    // Q_EMIT finished();
+    auto job = new QKeychain::WritePasswordJob(u"konlineaccounts"_s);
+    job->setKey(u"account/" + m_builder->accountId() + u"/nextcloud/password");
+    job->setTextData(password);
+    connect(job, &QKeychain::WritePasswordJob::finished, this, [this, job] {
+        if (job->error()) {
+            qCWarning(LOG_KONLINEACCOUNTS_NEXTCLOUD_SETUP) << "Failed to write password for Nextcloud account" << m_builder->accountId() << job->errorString();
+            m_builder->fail(job->errorString());
+            return;
+        }
+        m_builder->finish();
+    });
+    job->start();
 }
 
 void NextcloudSetup::checkServer(const QString &path)

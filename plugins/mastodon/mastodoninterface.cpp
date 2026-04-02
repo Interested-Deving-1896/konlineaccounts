@@ -6,7 +6,13 @@
 
 #include "mastodoninterface.h"
 
+#include "debug.h"
 #include "fdwriter.h"
+
+#include <qt6keychain/keychain.h>
+
+#include <QDBusConnection>
+#include <QDBusMessage>
 
 using namespace Qt::Literals;
 
@@ -44,25 +50,70 @@ QString MastodonInterface::clientId() const
     return m_config.readEntry("clientId", QString());
 }
 
-QString MastodonInterface::clientSecret() const
+QDBusUnixFileDescriptor MastodonInterface::clientSecret() const
 {
     CHECK_ACCESS
 
-    return m_config.readEntry("clientSecret", QString());
+    m_account->setDelayedReply(true);
+
+    QKeychain::ReadPasswordJob *job = new QKeychain::ReadPasswordJob(u"konlineaccounts"_s);
+    job->setKey(u"account/" + m_account->id() + u"/mastodon/client_secret");
+
+    connect(job, &QKeychain::Job::finished, this, [job, message = m_account->message()] {
+        if (job->error()) {
+            qCWarning(LOG_KONLINEACCOUNTS_MASTODON) << "Failed to read client_secret from keychain" << job->errorString();
+            auto reply = message.createErrorReply(QDBusError::InternalError, job->errorString());
+            QDBusConnection::sessionBus().send(reply);
+            return;
+        }
+
+        const auto result = FdWriter::write(job->textData().toUtf8());
+
+        if (!result) {
+            auto reply = message.createErrorReply(QDBusError::InternalError, u"Internal Error"_s);
+            QDBusConnection::sessionBus().send(reply);
+            return;
+        }
+
+        auto reply = message.createReply(QVariant::fromValue(result.value()));
+        QDBusConnection::sessionBus().send(reply);
+    });
+
+    job->start();
+
+    return {};
 }
 
 QDBusUnixFileDescriptor MastodonInterface::accessToken() const
 {
     CHECK_ACCESS
 
-    const QByteArray accessToken = m_config.readEntry("accessToken", QString()).toUtf8();
+    m_account->setDelayedReply(true);
 
-    const auto result = FdWriter::write(accessToken);
+    QKeychain::ReadPasswordJob *job = new QKeychain::ReadPasswordJob(u"konlineaccounts"_s);
+    job->setKey(u"account/" + m_account->id() + u"/mastodon/access_token");
 
-    if (!result) {
-        m_account->sendErrorReply(QDBusError::InternalError, u"Internal error"_s);
-        return {};
-    }
+    connect(job, &QKeychain::Job::finished, this, [job, message = m_account->message()] {
+        if (job->error()) {
+            qCWarning(LOG_KONLINEACCOUNTS_MASTODON) << "Failed to read access_token from keychain" << job->errorString();
+            auto reply = message.createErrorReply(QDBusError::InternalError, job->errorString());
+            QDBusConnection::sessionBus().send(reply);
+            return;
+        }
 
-    return *result;
+        const auto result = FdWriter::write(job->textData().toUtf8());
+
+        if (!result) {
+            auto reply = message.createErrorReply(QDBusError::InternalError, u"Internal Error"_s);
+            QDBusConnection::sessionBus().send(reply);
+            return;
+        }
+
+        auto reply = message.createReply(QVariant::fromValue(result.value()));
+        QDBusConnection::sessionBus().send(reply);
+    });
+
+    job->start();
+
+    return {};
 }

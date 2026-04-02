@@ -23,7 +23,9 @@
 
 #include <QCoro/QCoroCore>
 
-#include "debug.h"
+#include <qt6keychain/keychain.h>
+
+#include "setup_debug.h"
 
 using namespace Qt::Literals;
 
@@ -46,7 +48,7 @@ QCoro::Task<void> MastodonSetup::doRegisterMastodon(const QString &_instanceUrl)
     handler->setCallbackText(i18n("Authentication completed, return to System Settings"));
 
     connect(handler, &QOAuthHttpServerReplyHandler::tokenRequestErrorOccurred, this, [this](QAbstractOAuth::Error /*error*/, const QString &errorString) {
-        qCWarning(LOG_KONLINEACCOUNTS_MASTODON) << "Mastodon OAuth callback error" << errorString;
+        qCWarning(LOG_KONLINEACCOUNTS_MASTODON_SETUP) << "Mastodon OAuth callback error" << errorString;
         m_builder->fail(errorString);
     });
 
@@ -68,7 +70,7 @@ QCoro::Task<void> MastodonSetup::doRegisterMastodon(const QString &_instanceUrl)
     const QByteArray registerReplyData = co_await registerReply;
 
     if (registerReply->error()) {
-        qCWarning(LOG_KONLINEACCOUNTS_MASTODON) << "Error registering OAuth app" << registerReply->errorString();
+        qCWarning(LOG_KONLINEACCOUNTS_MASTODON_SETUP) << "Error registering OAuth app" << registerReply->errorString();
         m_builder->fail(registerReply->errorString());
         co_return;
     }
@@ -83,7 +85,7 @@ QCoro::Task<void> MastodonSetup::doRegisterMastodon(const QString &_instanceUrl)
 
     const QVariantMap values = co_await qCoro(handler, &QOAuthHttpServerReplyHandler::callbackReceived);
 
-    qCDebug(LOG_KONLINEACCOUNTS_MASTODON) << "Got Mastodon OAuth callback";
+    qCDebug(LOG_KONLINEACCOUNTS_MASTODON_SETUP) << "Got Mastodon OAuth callback";
 
     const QString authCode = values[u"code"_s].toString();
 
@@ -103,7 +105,7 @@ QCoro::Task<void> MastodonSetup::doRegisterMastodon(const QString &_instanceUrl)
     auto tokenData = co_await tokenReply;
 
     if (tokenReply->error()) {
-        qCWarning(LOG_KONLINEACCOUNTS_MASTODON) << "Failed to obtain Mastodon token" << tokenReply->errorString();
+        qCWarning(LOG_KONLINEACCOUNTS_MASTODON_SETUP) << "Failed to obtain Mastodon token" << tokenReply->errorString();
         m_builder->fail(tokenReply->errorString());
         co_return;
     }
@@ -116,10 +118,37 @@ QCoro::Task<void> MastodonSetup::doRegisterMastodon(const QString &_instanceUrl)
     mastodonGroup.writeEntry("instanceUrl", instanceUrl);
     mastodonGroup.writeEntry("username", "nico");
     mastodonGroup.writeEntry("clientId", clientId);
-    mastodonGroup.writeEntry("clientSecret", clientSecret);
-    mastodonGroup.writeEntry("accessToken", accessToken);
+
+    auto writeClientSecretJob = new QKeychain::WritePasswordJob(u"konlineaccounts"_s);
+    writeClientSecretJob->setKey(u"account/" + m_builder->accountId() + u"/mastodon/client_secret");
+    writeClientSecretJob->setTextData(clientSecret);
+    writeClientSecretJob->start();
+
+    co_await qCoro(writeClientSecretJob, &QKeychain::WritePasswordJob::finished);
+
+    if (writeClientSecretJob->error()) {
+        qCWarning(LOG_KONLINEACCOUNTS_MASTODON_SETUP) << "Failed to write client secret for Mastodon account" << m_builder->accountId()
+                                                      << writeClientSecretJob->errorString();
+        m_builder->fail(writeClientSecretJob->errorString());
+        co_return;
+    }
+
+    auto writeAccessTokenJob = new QKeychain::WritePasswordJob(u"konlineaccounts"_s);
+    writeAccessTokenJob->setKey(u"account/" + m_builder->accountId() + u"/mastodon/access_token");
+    writeAccessTokenJob->setTextData(accessToken);
+    writeAccessTokenJob->start();
+
+    co_await qCoro(writeAccessTokenJob, &QKeychain::WritePasswordJob::finished);
+
+    if (writeAccessTokenJob->error()) {
+        qCWarning(LOG_KONLINEACCOUNTS_MASTODON_SETUP) << "Failed to write access token for Mastodon account" << m_builder->accountId()
+                                                      << writeAccessTokenJob->errorString();
+        m_builder->fail(writeAccessTokenJob->errorString());
+        co_return;
+    }
 
     m_builder->finish();
+
     co_return;
 }
 

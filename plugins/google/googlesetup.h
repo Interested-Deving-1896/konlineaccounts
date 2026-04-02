@@ -12,6 +12,8 @@
 #include <KGAPI/Account>
 #include <KGAPI/AuthJob>
 
+#include <QCoro/QCoroCore>
+
 #include "accountbuilder.h"
 
 class GoogleSetup : public QObject
@@ -26,13 +28,8 @@ public:
     void setBuilder(AccountBuilder *builder);
     Q_SIGNAL void builderChanged();
 
-public Q_SLOTS:
-    void slotAuthJobFinished(KGAPI2::Job *job);
-
-Q_SIGNALS:
-    void finished();
+    QCoro::Task<void> doWork();
 
 private:
-    KGAPI2::AccountPtr m_account;
     AccountBuilder *m_builder;
 };

@@ -22,8 +22,6 @@ class MastodonInterface : public QDBusAbstractAdaptor
     Q_PROPERTY(QString instanceUrl READ instanceUrl)
     Q_PROPERTY(QString username READ username)
     Q_PROPERTY(QString clientId READ clientId)
-    Q_PROPERTY(QString clientSecret READ clientSecret)
-    Q_PROPERTY(QDBusUnixFileDescriptor accessToken READ accessToken)
 
 public:
     MastodonInterface(Account *account, KConfigGroup config);
@@ -31,8 +29,8 @@ public:
     QString instanceUrl() const;
     QString username() const;
     QString clientId() const;
-    QString clientSecret() const;
-    QDBusUnixFileDescriptor accessToken() const;
+    Q_SCRIPTABLE QDBusUnixFileDescriptor clientSecret() const;
+    Q_SCRIPTABLE QDBusUnixFileDescriptor accessToken() const;
 
 private:
     KConfigGroup m_config;

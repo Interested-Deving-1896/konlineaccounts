@@ -26,6 +26,8 @@ find_package(KPim6GAPI REQUIRED)
 
 find_package(QCoro6 REQUIRED COMPONENTS Core Network)
 
+find_package(Qt6Keychain REQUIRED)
+
 qcoro_enable_coroutines()
 
 add_subdirectory(lib)

@@ -21,8 +21,6 @@ class GoogleInterface : public QDBusAbstractAdaptor
 
     Q_PROPERTY(QString clientId READ clientId)
     Q_PROPERTY(QString clientSecret READ clientSecret)
-    Q_PROPERTY(QDBusUnixFileDescriptor accessToken READ accessToken)
-    Q_PROPERTY(QDBusUnixFileDescriptor refreshToken READ refreshToken)
     Q_PROPERTY(QStringList scopes READ scopes)
 
 public:
@@ -30,9 +28,10 @@ public:
 
     QString clientId() const;
     QString clientSecret() const;
-    QDBusUnixFileDescriptor accessToken() const;
-    QDBusUnixFileDescriptor refreshToken() const;
     QStringList scopes() const;
+
+    Q_SCRIPTABLE QDBusUnixFileDescriptor accessToken() const;
+    Q_SCRIPTABLE QDBusUnixFileDescriptor refreshToken() const;
 
 private:
     KConfigGroup m_config;

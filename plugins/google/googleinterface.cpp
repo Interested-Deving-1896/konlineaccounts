@@ -6,7 +6,13 @@
 
 #include "googleinterface.h"
 
+#include "debug.h"
 #include "fdwriter.h"
+
+#include <qt6keychain/keychain.h>
+
+#include <QDBusConnection>
+#include <QDBusMessage>
 
 using namespace Qt::Literals;
 
@@ -41,34 +47,68 @@ QDBusUnixFileDescriptor GoogleInterface::accessToken() const
 {
     CHECK_ACCESS
 
-    const QByteArray accessToken = m_config.readEntry("accessToken", QString()).toUtf8();
+    m_account->setDelayedReply(true);
 
-    const auto result = FdWriter::write(accessToken);
+    QKeychain::ReadPasswordJob *job = new QKeychain::ReadPasswordJob(u"konlineaccounts"_s);
+    job->setKey(u"account/" + m_account->id() + u"/google/access_token");
 
-    if (!result) {
-        m_account->sendErrorReply(QDBusError::InternalError, u"Internal error"_s);
-        return {};
-    }
+    connect(job, &QKeychain::Job::finished, this, [job, message = m_account->message()] {
+        if (job->error()) {
+            qCWarning(LOG_KONLINEACCOUNTS_GOOGLE) << "Failed to access token from keychain" << job->errorString();
+            auto reply = message.createErrorReply(QDBusError::InternalError, job->errorString());
+            QDBusConnection::sessionBus().send(reply);
+            return;
+        }
 
-    return *result;
+        const auto result = FdWriter::write(job->textData().toUtf8());
+
+        if (!result) {
+            auto reply = message.createErrorReply(QDBusError::InternalError, u"Internal error"_s);
+            QDBusConnection::sessionBus().send(reply);
+            return;
+        }
+
+        auto reply = message.createReply(QVariant::fromValue(result.value()));
+        QDBusConnection::sessionBus().send(reply);
+    });
+
+    job->start();
+
+    return {};
 }
 
 QDBusUnixFileDescriptor GoogleInterface::refreshToken() const
 {
     CHECK_ACCESS
 
-    CHECK_ACCESS
+    m_account->setDelayedReply(true);
 
-    const QByteArray accessToken = m_config.readEntry("refreshToken", QString()).toUtf8();
+    QKeychain::ReadPasswordJob *job = new QKeychain::ReadPasswordJob(u"konlineaccounts"_s);
+    job->setKey(u"account/" + m_account->id() + u"/google/refresh_token");
 
-    const auto result = FdWriter::write(accessToken);
+    connect(job, &QKeychain::Job::finished, this, [job, message = m_account->message()] {
+        if (job->error()) {
+            qCWarning(LOG_KONLINEACCOUNTS_GOOGLE) << "Failed to refresh token from keychain" << job->errorString();
+            auto reply = message.createErrorReply(QDBusError::InternalError, job->errorString());
+            QDBusConnection::sessionBus().send(reply);
+            return;
+        }
 
-    if (!result) {
-        m_account->sendErrorReply(QDBusError::InternalError, u"Internal error"_s);
-        return {};
-    }
+        const auto result = FdWriter::write(job->textData().toUtf8());
 
-    return *result;
+        if (!result) {
+            auto reply = message.createErrorReply(QDBusError::InternalError, u"Internal error"_s);
+            QDBusConnection::sessionBus().send(reply);
+            return;
+        }
+
+        auto reply = message.createReply(QVariant::fromValue(result.value()));
+        QDBusConnection::sessionBus().send(reply);
+    });
+
+    job->start();
+
+    return {};
 }
 
 QStringList GoogleInterface::scopes() const

@@ -14,7 +14,9 @@
 #include <KConfigGroup>
 #include <KSharedConfig>
 
-#include "debug.h"
+#include <qt6keychain/keychain.h>
+
+#include "setup_debug.h"
 
 using namespace Qt::Literals;
 
@@ -43,39 +45,65 @@ QString clientSecret()
 GoogleSetup::GoogleSetup(QObject *parent)
     : QObject(parent)
 {
-    m_account = KGAPI2::AccountPtr(new KGAPI2::Account());
-    const QList<QUrl> resourceScopes = googleScopes();
-    for (const QUrl &scope : resourceScopes) {
-        if (!m_account->scopes().contains(scope)) {
-            m_account->addScope(scope);
-        }
-    }
-    auto authJob = new KGAPI2::AuthJob(m_account, clientId(), clientSecret());
-    authJob->setUsername(QString());
-    connect(authJob, &KGAPI2::AuthJob::finished, this, &GoogleSetup::slotAuthJobFinished);
+    doWork();
 }
 
-void GoogleSetup::slotAuthJobFinished(KGAPI2::Job *job)
+QCoro::Task<void> GoogleSetup::doWork()
 {
-    auto authJob = qobject_cast<KGAPI2::AuthJob *>(job);
-    m_account = authJob->account();
+    auto account = KGAPI2::AccountPtr(new KGAPI2::Account());
+    const QList<QUrl> resourceScopes = googleScopes();
+    for (const QUrl &scope : resourceScopes) {
+        if (!account->scopes().contains(scope)) {
+            account->addScope(scope);
+        }
+    }
+    auto authJob = new KGAPI2::AuthJob(account, clientId(), clientSecret());
+    authJob->setUsername(QString());
+
+    co_await qCoro(authJob, &KGAPI2::AuthJob::finished);
+
+    account = authJob->account();
 
     if (authJob->error() != KGAPI2::NoError) {
-        qCWarning(LOG_KONLINEACCOUNTS_GOOGLE) << "error!" << authJob->error() << authJob->errorString();
+        qCWarning(LOG_KONLINEACCOUNTS_GOOGLE_SETUP) << "error!" << authJob->error() << authJob->errorString();
         m_builder->fail(authJob->errorString());
-        return;
+        co_return;
     }
 
     auto googleGroup = m_builder->config().group(u"Google"_s);
     googleGroup.writeEntry("clientId", clientId());
     googleGroup.writeEntry("clientSecret", clientSecret());
-    googleGroup.writeEntry("accessToken", m_account->accessToken());
-    googleGroup.writeEntry("refreshToken", m_account->refreshToken());
-    googleGroup.writeEntry("scopes", m_account->scopes());
+    googleGroup.writeEntry("scopes", account->scopes());
+
+    auto writeRefreshTokenJob = new QKeychain::WritePasswordJob(u"konlineaccounts"_s);
+    writeRefreshTokenJob->setKey(u"account/" + m_builder->accountId() + u"/google/refresh_token");
+    writeRefreshTokenJob->setTextData(account->refreshToken());
+    writeRefreshTokenJob->start();
+
+    co_await qCoro(writeRefreshTokenJob, &QKeychain::WritePasswordJob::finished);
+
+    if (writeRefreshTokenJob->error()) {
+        qCWarning(LOG_KONLINEACCOUNTS_GOOGLE_SETUP) << "Failed to write refresh token for Google account" << m_builder->accountId()
+                                                    << writeRefreshTokenJob->errorString();
+        m_builder->fail(writeRefreshTokenJob->errorString());
+        co_return;
+    }
+
+    auto writeAccessTokenJob = new QKeychain::WritePasswordJob(u"konlineaccounts"_s);
+    writeAccessTokenJob->setKey(u"account/" + m_builder->accountId() + u"/google/access_token");
+    writeAccessTokenJob->setTextData(account->accessToken());
+    writeAccessTokenJob->start();
+
+    co_await qCoro(writeAccessTokenJob, &QKeychain::WritePasswordJob::finished);
+
+    if (writeAccessTokenJob->error()) {
+        qCWarning(LOG_KONLINEACCOUNTS_GOOGLE_SETUP) << "Failed to write access token for Google account" << m_builder->accountId()
+                                                    << writeAccessTokenJob->errorString();
+        m_builder->fail(writeAccessTokenJob->errorString());
+        co_return;
+    }
 
     m_builder->finish();
-
-    Q_EMIT finished();
 }
 
 AccountBuilder *GoogleSetup::builder() const
