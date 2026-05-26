@@ -1,6 +1,8 @@
 # SPDX-FileCopyrightText: 2025 Nicolas Fella <nicolas.fella@gmx.de>
 # SPDX-License-Identifier: BSD-2-Clause
 
+add_definitions(-DTRANSLATION_DOMAIN=\"konlineaccountsd\")
+
 add_executable(konlineaccountsd)
 
 ecm_add_qml_module(konlineaccountsd URI "org.kde.konlineaccounts.daemon" QML_FILES Main.qml DEPENDENCIES QtCore)

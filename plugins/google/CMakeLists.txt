@@ -1,6 +1,8 @@
 # SPDX-FileCopyrightText: 2025 Nicolas Fella <nicolas.fella@gmx.de>
 # SPDX-License-Identifier: BSD-2-Clause
 
+add_definitions(-DTRANSLATION_DOMAIN=\"konlineaccounts_google\")
+
 kcoreaddons_add_plugin(google INSTALL_NAMESPACE "konlineaccounts/providers")
 
 target_sources(google PRIVATE google.cpp googleinterface.cpp)

@@ -1,6 +1,8 @@
 # SPDX-FileCopyrightText: 2025 Nicolas Fella <nicolas.fella@gmx.de>
 # SPDX-License-Identifier: BSD-2-Clause
 
+add_definitions(-DTRANSLATION_DOMAIN=\"konlineaccounts_mastodon\")
+
 kcoreaddons_add_plugin(mastodon INSTALL_NAMESPACE "konlineaccounts/providers")
 
 target_sources(mastodon PRIVATE mastodon.cpp mastodoninterface.cpp)
