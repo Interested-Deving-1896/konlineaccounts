@@ -17,6 +17,7 @@ include(KDEGitCommitHooks)
 include(ECMQmlModule)
 include(ECMGenerateExportHeader)
 include(ECMQtDeclareLoggingCategory)
+include(ECMFindQmlModule)
 
 find_package(Qt6 6.10 REQUIRED COMPONENTS Core DBus NetworkAuth WebEngineCore WebEngineQuick)
 
@@ -27,6 +28,8 @@ find_package(KPim6GAPI REQUIRED)
 find_package(QCoro6 REQUIRED COMPONENTS Core Network)
 
 find_package(Qt6Keychain REQUIRED)
+
+ecm_find_qmlmodule(org.kde.ki18n REQUIRED)
 
 qcoro_enable_coroutines()
 

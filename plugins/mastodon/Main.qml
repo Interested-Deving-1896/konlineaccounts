@@ -11,11 +11,17 @@ import QtQuick.Controls as Controls
 import QtQuick.Layouts
 
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 import org.kde.konlineaccounts.mastodon
 import org.kde.konlineaccounts
 
 SetupItem {
     id: root
+
+    KI18nContext {
+        id: _tr
+        translationDomain: "konlineaccounts_mastodon"
+    }
 
     MastodonSetup {
         id: mastodon
@@ -35,7 +41,7 @@ SetupItem {
             Controls.TextField {
                 id: instance
                 placeholderText: "https://kde.social"
-                Kirigami.FormData.label: "Instance URL:"
+                Kirigami.FormData.label: _tr.i18n("Instance URL:")
             }
 
             Controls.BusyIndicator {
@@ -46,7 +52,7 @@ SetupItem {
         }
 
         Controls.Button {
-            text: "Add"
+            text: _tr.i18n("Add")
 
             enabled: !busy.running
 

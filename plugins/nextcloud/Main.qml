@@ -12,11 +12,17 @@ import QtQuick.Layouts
 import QtWebEngine
 
 import org.kde.kirigami as Kirigami
+import org.kde.ki18n
 import org.kde.konlineaccounts.nextcloud
 import org.kde.konlineaccounts
 
 SetupItem {
     id: root
+
+    KI18nContext {
+        id: _tr
+        translationDomain: "konlineaccounts_nextcloud"
+    }
 
     Loader {
         id: loader
@@ -47,12 +53,12 @@ SetupItem {
 
                     Controls.TextField {
                         id: instance
-                        Kirigami.FormData.label: "Server:"
+                        Kirigami.FormData.label: _tr.i18n("Server:")
                     }
                 }
 
                 Controls.Button {
-                    text: "Add"
+                    text: _tr.i18n("Add")
 
                     Layout.alignment: Qt.AlignRight
 
