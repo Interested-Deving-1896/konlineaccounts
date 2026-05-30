@@ -18,3 +18,4 @@ Dependencies:
 Options:
  test-before-installing: true
  require-passing-tests-on: ['@all']
+ run-qmllint: true
