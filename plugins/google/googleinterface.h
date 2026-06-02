@@ -19,6 +19,7 @@ class GoogleInterface : public QDBusAbstractAdaptor
     Q_OBJECT
     Q_CLASSINFO("D-Bus Interface", "org.kde.KOnlineAccounts.Google")
 
+    Q_PROPERTY(QString accountName READ accountName)
     Q_PROPERTY(QString clientId READ clientId)
     Q_PROPERTY(QString clientSecret READ clientSecret)
     Q_PROPERTY(QStringList scopes READ scopes)
@@ -26,6 +27,7 @@ class GoogleInterface : public QDBusAbstractAdaptor
 public:
     GoogleInterface(Account *account, KConfigGroup config);
 
+    QString accountName() const;
     QString clientId() const;
     QString clientSecret() const;
     QStringList scopes() const;

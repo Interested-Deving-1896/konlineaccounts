@@ -29,6 +29,13 @@ GoogleInterface::GoogleInterface(Account *account, KConfigGroup config)
         return {};                                                                                                                                             \
     }
 
+QString GoogleInterface::accountName() const
+{
+    CHECK_ACCESS
+
+    return m_config.readEntry("accountName", QString());
+}
+
 QString GoogleInterface::clientId() const
 {
     CHECK_ACCESS

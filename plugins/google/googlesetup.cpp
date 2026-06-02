@@ -71,6 +71,7 @@ QCoro::Task<void> GoogleSetup::doWork()
     }
 
     auto googleGroup = m_builder->config().group(u"Google"_s);
+    googleGroup.writeEntry("accountName", account->accountName());
     googleGroup.writeEntry("clientId", clientId());
     googleGroup.writeEntry("clientSecret", clientSecret());
     googleGroup.writeEntry("scopes", account->scopes());
