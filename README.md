@@ -1,66 +1,75 @@
-## KOnlineAccounts
+[update-readmes]   Mode: rewrite — migrating to template structure...
+# konlineaccounts
 
-KOnlineAccounts is a system service to allow applications to obtain information about system-wide logged in accounts. It's designed to replace the current KAccounts system.
+[![Built with Ona](https://ona.com/build-with-ona.svg)](https://app.ona.com/#https://github.com/Interested-Deving-1896/konlineaccounts)
 
-### Why replace KAccounts?
+<!-- AI:start:what-it-does -->
+_Description pending._
+<!-- AI:end:what-it-does -->
 
-KAccounts suffers from a number of problems that are hard to address in an iterative manner.
+## Architecture
 
-- Not many applications actually use it. Notably absent is KDE PIM
-- Its architecture is not sandbox-friendly. Applications more or less directly read account data from a database in the home directory. If they can read the database they have access to all accounts of all types. There is no way to do fine-grained access control.
-- The architecture is rather complex. Responsibilities are split across a dozen repos, some of which are outside the direct control of KDE and mostly unmaintained. 
+<!-- AI:start:architecture -->
+_Architecture documentation pending._
+<!-- AI:end:architecture -->
 
-### Design Goals
+## Install
 
-- Be simple and flexible/extensible. Avoid making too many assumptions about different account types.
-- Be friendly to Flatpak and other sandboxed formats.
-- Allow per-app per-account access control, where feasible
-- Separate functionality from provider. A given provider (e.g. Nextcloud) can expose more than one functionality (e.g. webdav, carddav, caldav), and a given functionality can be provided my more than one provider (e.g. caldav can be provided by Nextcloud or a company-specific provider)
-- Be extensible with custom providers
-- Allow applications to leverage it without heavy dependencies
+<!-- Add installation instructions here. This section is yours — the AI will not modify it. -->
 
-### Architecture
+```bash
+git clone https://github.com/Interested-Deving-1896/konlineaccounts.git
+cd konlineaccounts
+```
 
-The central piece is the konlineaccountsd dameon. It provides a DBus interface that applications use to obtain all information about the accounts.
+## Usage
 
-Applications can list the accounts they have access to, and request access to a new account.
+<!-- Add usage examples here. This section is yours — the AI will not modify it. -->
 
-Every granted account is exposed as an object on the Bus. Account functionality is exposed using specific interfaces on that object. For example a Nextcloud account might expose a Nextcloud-specific interface, a CalDAV interface, and a CardDAV interface.
+## Configuration
 
-A KCM allows to add and manage accounts. When adding a new account the KCM can suggest applications that can make use of this account and offers to directly authenticate them.
+<!-- Document configuration options here. This section is yours — the AI will not modify it. -->
 
-### Security Considerations
+## CI
 
-KOnlineAccounts tries to restrict access to account data and secrets to authorized apps as much as feasible.
+<!-- AI:start:ci -->
+_CI documentation pending._
+<!-- AI:end:ci -->
 
-Access control is managed based on the application ID/desktop file name.
+## Mirror chain
 
-For unsandboxed applications the application ID is taken from the registerApp() DBus call. Since any app can send anything there this is fundamentally not secure.
+<!-- AI:start:mirror-chain -->
+This repo is maintained in [`Interested-Deving-1896/konlineaccounts`](https://github.com/Interested-Deving-1896/konlineaccounts) and mirrored through:
 
-For Flatpak applications we obtain the true app ID from the Flatpak runtime, similar to what xdg-desktop-portal does. The value from registerApp() is ignored. This only works correctly with Qt >= 6.11 (needs https://codereview.qt-project.org/c/qt/qtbase/+/659344).
+```
+Interested-Deving-1896/konlineaccounts  ──►  OpenOS-Project-OSP/konlineaccounts  ──►  OpenOS-Project-Ecosystem-OOC/konlineaccounts
+```
 
-Once an application had access to a secret that access cannot be meaningfully revoked, other than changing that secret. KOnlineAccounts currently makes no attempt at rotating secrets, so removing application access to an account cannot be securely implemented.
+Changes flow downstream automatically via the hourly mirror chain in
+[`fork-sync-all`](https://github.com/Interested-Deving-1896/fork-sync-all).
+Direct commits to OSP or OOC are detected and opened as PRs back to `Interested-Deving-1896`.
+<!-- AI:end:mirror-chain -->
 
-### Providers
+## Contributors
 
-Currently the following providers are supported:
+<!-- AI:start:contributors -->
+_Contributors pending._
+<!-- AI:end:contributors -->
 
-- Nextcloud
-- Mastodon
-- Google
+## Origins
 
-### Consumers
+<!-- AI:start:origins -->
+_Original project — no upstream fork._
+<!-- AI:end:origins -->
 
-Check the demo application under `demo/`.
+## Resources
 
-[Tokodon](https://invent.kde.org/network/tokodon/-/merge_requests/777) (in master)
+<!-- AI:start:resources -->
+_No additional resource files found._
+<!-- AI:end:resources -->
 
-[Purpose](https://invent.kde.org/frameworks/purpose/-/merge_requests/146)
+## License
 
-KDE PIM (in master)
-
-### Status
-
-This project is in a prototype stage, not ready for production.
-
-Check the Issues page and inline comments for things to be done.
+<!-- AI:start:license -->
+<!-- License not detected — add a LICENSE file to this repo. -->
+<!-- AI:end:license -->
